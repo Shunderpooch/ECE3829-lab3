@@ -25,7 +25,17 @@ module lab3(
     input read,
 	 input reset,
     output [6:0] seg,
-    output [3:0] anode
+    output [3:0] anode,
+	 output [25:0]addr,
+	 output memclk,
+	 output adv_n,
+	 output cre,
+	 output ce_n,
+	 output oe_n,
+	 output we_n,
+	 output lb_n,
+	 output ub_n,
+	 inout [15:0] mem_data
     );
 
 		wire clk_10m;
