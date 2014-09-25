@@ -47,6 +47,14 @@ module lab3(
 		 // Status and control signals
 		 .RESET(reset));       // IN
 	
+	//seven seg display
+	seven_seg s (
+    .in({4'b0, sw[7:4], 4'b0, sw [3:0]}), 
+    .clk(clk_10m), 
+    .seg(seg), 
+    .anodes(anode)
+    );
+	
 	//Button debouncers
 	wire write_db;
 	but_debounce db1 (
@@ -62,5 +70,27 @@ module lab3(
     .reset(reset), 
     .but_out(read_db)
     );
+	  
+	 wire validread;
+	mem_control ram_control (
+		 .clk(clk_10m),
+		 .data(mem_data), 
+		 .read_ready(validread), 
+		 .memclk(memclk), 
+		 .adv_n(adv_n), 
+		 .cre(cre), 
+		 .ce_n(ce_n), 
+		 .oe_n(oe_n), 
+		 .we_n(we_n), 
+		 .lb_n(lb_n), 
+		 .ub_n(ub_n), 
+		 .read(read_db), 
+		 .write(write_db), 
+		 .datain({4'b0, sw [3:0]}), 
+		 //.dataout(dataout), //unconnected for now
+		 .addr(addr), 
+		 .reset(reset),
+		 .addr_in(sw[7:4])
+		 );
 
 endmodule

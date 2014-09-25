@@ -26,7 +26,7 @@ module seven_seg(
     );
 	 
 	 reg [1:0] mux = 0;	//anode selector mux
-	 reg [14:0] count = 0;	//counter to scale down clock
+	 reg [13:0] count = 0;	//counter to scale down clock
 	 
 	 //Scale down clock to 1khz
 	 always @ (posedge clk)

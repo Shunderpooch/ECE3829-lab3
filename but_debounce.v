@@ -56,10 +56,10 @@ module but_debounce(
 				curr_state <= curr_state;
 				
 	//Next State logic
-	always @ (curr_state, but_in)
+	always @ (curr_state, but_in, but_out)
 		case (curr_state)
 			s0: begin
-					but_out = 1'b0;
+					//but_out = 1'b0;
 					if(but_in)
 						next_state = s1;
 					else
@@ -80,12 +80,22 @@ module but_debounce(
 					next_state = s1;
 			end
 			s3: begin
-					but_out = 1'b1;
+					//but_out = 1'b1;
 					if(but_in)
 						next_state = s3;
 					else
 						next_state = s2;
 				end
 		endcase
+		
+		//output
+		always @ (posedge clk)
+			if (curr_state == s3)
+				but_out <= 1'b1;
+			else if (curr_state == s0)
+				but_out <= 1'b0;
+			else
+				but_out <= but_out;
+			
 
 endmodule
