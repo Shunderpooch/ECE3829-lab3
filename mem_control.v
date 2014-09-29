@@ -38,7 +38,7 @@ module mem_control(
 	 output read_ready,
     input write,
     input [7:0] datain,
-    //output [7:0] dataout,	//currently unconnected
+    output reg [7:0] dataout,
     input [3:0] addr_in
     );
 	 
@@ -82,6 +82,15 @@ module mem_control(
 		endcase
 		
 		//Output logic
+		
+		//set dataout to always show last read
+		always @(posedge clk)
+			if (current_state == read_done)
+				dataout <= data[7:0];
+			else
+				dataout <= dataout;
+				
+		
 		assign memclk = 0;
 		assign ce_n = 0;
 		assign lb_n = 0;
@@ -90,7 +99,7 @@ module mem_control(
 		assign addr = { 22'b0, addr_in};
 		assign adv_n = 0;
 		assign cre = 0;
-		assign oe_n = (current_state == reading || current_state == read_done) ? 1'b1 : 1'b0;
+		assign oe_n = ((current_state == reading || current_state == read_done)) ? 1'b0 : 1'b1;
 		assign data = (current_state == writing) ? {8'b0, datain} :
 			16'bZ;
 		assign read_ready = (current_state == read_done);

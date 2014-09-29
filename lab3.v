@@ -48,8 +48,12 @@ module lab3(
 		 .RESET(reset));       // IN
 	
 	//seven seg display
+	wire[15:0] seg_in;
+	wire[7:0] dataout;
+	assign seg_in = (read) ? {4'b0, sw[7:4], dataout} :
+		{4'b0, sw[7:4], 4'b0, sw[3:0]};
 	seven_seg s (
-    .in({4'b0, sw[7:4], 4'b0, sw [3:0]}), 
+    .in(seg_in), 
     .clk(clk_10m), 
     .seg(seg), 
     .anodes(anode)
@@ -87,7 +91,7 @@ module lab3(
 		 .read(read_db), 
 		 .write(write_db), 
 		 .datain({4'b0, sw [3:0]}), 
-		 //.dataout(dataout), //unconnected for now
+		 .dataout(dataout), 
 		 .addr(addr), 
 		 .reset(reset),
 		 .addr_in(sw[7:4])
