@@ -1,3 +1,5 @@
+#Lukas Hunker, Brede Doerner
+
 NET "seg[0]" LOC = L14;
 NET "seg[1]" LOC = N14;
 NET "seg[2]" LOC = M14;
@@ -81,4 +83,4 @@ NET "addr[0]" LOC = K18;
 
 NET "dac_clock" LOC = P11;
 NET "dac_sync" LOC = T12;
-NET "dac_data" LOC = V12;
+NET "dac_sout" LOC = V12;

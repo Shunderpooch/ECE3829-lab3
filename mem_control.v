@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
-// Engineer: 
+// Engineer: Lukas Hunker, Brede Doerner
 // 
 // Create Date:    15:57:45 09/25/2014 
 // Design Name: 
@@ -9,7 +9,7 @@
 // Project Name: 
 // Target Devices: 
 // Tool versions: 
-// Description: 
+// Description: Interfaces with sram to read and write values
 //
 // Dependencies: 
 //
@@ -106,7 +106,6 @@ module mem_control(
 		assign lb_n = 0;
 		assign ub_n = 0;
 		assign we_n = (current_state != writing);
-		assign addr = { 22'b0, addr_in};
 		assign adv_n = 0;
 		assign cre = 0;
 		assign oe_n = ((current_state == reading || current_state == read_done)) ? 1'b0 : 1'b1;

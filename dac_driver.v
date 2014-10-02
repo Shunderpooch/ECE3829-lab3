@@ -25,11 +25,11 @@ module dac_driver(
 	input [7:0] dac_control,
 	input dac_begin,
 	output dac_sout,
-	output dac_sync
+	output reg dac_sync
 	);
 	
-		//FFs used to encode the state of the SPI transmission
-		reg dac_sync = 1;
+		//FF used with dac_sync to encode the state of the SPI transmission
+
 		reg running = 0;
 		
 		//serial output from the shift register

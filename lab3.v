@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
-// Engineer: 
+// Engineer: Lukas Hunker, Brede Doerner
 // 
 // Create Date:    14:20:37 09/25/2014 
 // Design Name: 
@@ -9,8 +9,8 @@
 // Project Name: 
 // Target Devices: 
 // Tool versions: 
-// Description: 
-//
+// Description: Top level of lab 3. Reads 8 values into sram, then allows them to be read back
+//					then outputs values to DAC
 // Dependencies: 
 //
 // Revision: 
@@ -39,8 +39,26 @@ module lab3(
 	 output dac_clock,
 	 output dac_sync
     );
+	 
+	 //output clock from the dcm
+	 wire clk_10m;
+	 
+	 //oddr2 register to forward clock to the dac
+	 ODDR2 #(
+		.DDR_ALIGNMENT("NONE"),
+		.INIT(1'b0),
+		.SRTYPE("SYNC")
+		) clock_forward_inst (
+			.Q(dac_clock),
+			.C0(~clk_10m),
+			.C1(clk_10m),
+			.CE(1'b1),
+			.D0(1'b0),
+			.D1(1'b1),
+			.R(1'b0),
+			.S(1'b0)
+		);
 
-		wire clk_10m;
 	  dcm_10 clock_mod
 		(// Clock in ports
 		 .CLK_IN1(clk),      // IN
@@ -50,8 +68,8 @@ module lab3(
 		 .RESET(reset));       // IN
 	
 	//seven seg display
-	wire[15:0] seg_in;
-	wire[7:0] dataout;
+	reg [15:0] seg_in;
+	seven_seg display (
     .in(seg_in), 
     .clk(clk_10m), 
     .seg(seg), 
@@ -67,10 +85,12 @@ module lab3(
     .but_out(button_db)
     );
 	  
+	 //memory interface
 	 wire read_ready;
-	 wire [7:0] datain;
-	 wire read_sig, write_sig;
-	 wire [3:0] addrin;
+	 reg [7:0] datain;
+	 wire [7:0] dataout;
+	 reg read_sig, write_sig;
+	 reg [3:0] addrin;
 	mem_control ram_control (
 		 .clk(clk_10m),
 		 .data(mem_data), 
@@ -94,28 +114,40 @@ module lab3(
 	
 	//counter to generate 10KHz clken_10KHz
 	wire clken_10KHz;
-	reg [6:0] clken_count;
+	reg [9:0] clken_count;
 	always @(posedge clk_10m)
 	begin
-	if(clken_count == 7'd99)
+	if(clken_count == 999)
 		clken_count <= 7'd0;
 	else
-		clken_count <= clken_count + 7'd1;
+		clken_count <= clken_count + 1'b1;
 	end
 	//generate clock enable at a rate of 10 KHz
-	assign clken_10KHz = (clken_count == 7'd99);
+	assign clken_10KHz = (clken_count == 0);
 	
-	parameter [1:0] init = 2'd0, write = 2'd1, read = 2'd2, dac = 2'd3;
+	//state machine parameters
+	parameter [1:0] init = 2'h0, write = 2'h1, read = 2'h2, dac = 2'h3;
+	
+	//generate a delayed 
+	reg button_pressed;
+	always @(posedge clk_10m)
+		button_pressed <= button_db;
 	
 	//counter for address bus
 	reg [3:0] count;
 	always @(posedge clk_10m)
 	begin
-	if((state == write & button_db) | (state == dac & clken_10KHz))
-		if(count == 4'd9)
-			count <= 4'd0;
-		else
-			count <= count + 4'd1;
+		if((current_state == write) & button_db & ~button_pressed)
+			count <= count + 1'b1;
+		else if((current_state == dac) & clken_10KHz)
+		begin
+			if(count == 7)
+				count <= 4'b0;
+			else
+				count <= count + 1'b1;
+		end
+		else if(current_state == init)
+			count <= 4'h0;
 	end
 	
 	//instantiate dac driver
@@ -134,25 +166,25 @@ module lab3(
 	reg [1:0] current_state, next_state;
 	
 	//next state logic
-	always @(count, button_db)
+	always @(count, button_db, current_state, button_pressed)
 	case(current_state)
 		init:
 			next_state = write;
 		write:
-			if(count == 4'd9)
+			if(count == 4'h8)
 				next_state = read;
 			else
 				next_state = write;
 		read:
-			if(button_db)
+			if(button_db & ~button_pressed)
 				next_state = dac;
 			else
 				next_state = read;
 		dac:
-			if(button_db)
+			if(button_db & ~button_pressed)
 				next_state = init;
 			else
-				next_state = read;
+				next_state = dac;
 	endcase
 	
 	//synchronous state machine with asynchronous reset
@@ -163,40 +195,45 @@ module lab3(
 		current_state <= next_state;
 	
 	//output logic
-	always @(current_state, count, clken_10KHz, button_db, sw, read_ready)
+	always @(dataout, current_state, count, clken_10KHz, button_db, sw)
 	begin
 		case(current_state)
 			init:
-				addrin = 4'd0;
-				datain = 8'd0;
-				seg_in = 16'd0;
+			begin
+				addrin = 4'h0;
+				datain = 8'h0;
+				seg_in = 16'h0;
 				read_sig = 1'b0;
 				write_sig = 1'b0;
+			end
 			write:
+			begin
 				addrin = count;
 				datain = sw;
-				seg_in = {8'd0, sw};
+				seg_in = {4'h0, count, sw};
 				read_sig = 1'b0;
 				write_sig = button_db;
+			end
 			read:
-				addrin = sw[3:0]
-				datain = 8'd0;
-				seg_in = {8'd0, dataout};
-				if(read_ready)
-					read_sig = 1;
-				else
-					read_sig = 0;
+			begin
+				addrin = sw[3:0];
+				datain = 8'h0;
+				seg_in = {addrin, 4'b0, dataout};
+				read_sig = 1'b1;
 				write_sig = 1'b0;
+			end
 			dac:
+			begin
 				addrin = count;
-				datain = 8'd0;
-				seg_in = 16'd0;
-				read_sig = clken_10KHz;
+				datain = 8'h0;
+				seg_in = {16'b0};
+				read_sig = 1'b1;
 				write_sig = 1'b0;
+			end
 		endcase
 	end
 	
-	assign dac_begin = (current_state == dac & read_ready) ? 1'b1 : 0;
+	assign dac_begin = (current_state == dac & read_ready) ? 1'b1 : 1'b0;
 	
 	assign dac_data = dataout;
 	

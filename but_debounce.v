@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
-// Engineer: Lukas Hunker
+// Engineer: Lukas Hunker, Brede Doerner
 // 
 // Create Date:    14:31:12 09/25/2014 
 // Design Name: 
@@ -9,7 +9,7 @@
 // Project Name: 
 // Target Devices: 
 // Tool versions: 
-// Description: 
+// Description: Debounces the signal in but_in, and outputs it to but_out
 //
 // Dependencies: 
 //
@@ -41,6 +41,7 @@ module but_debounce(
 	assign clk_en = (count == 0);
 	
 	//State Machine
+	//Uses 4 states to delay change from but_in to but_out
 	parameter [1:0] s0 = 0, s1 = 1, s2 = 2, s3 = 3;
 	
 	reg [1:0] curr_state, next_state;
@@ -59,21 +60,18 @@ module but_debounce(
 	always @ (curr_state, but_in, but_out)
 		case (curr_state)
 			s0: begin
-					//but_out = 1'b0;
 					if(but_in)
 						next_state = s1;
 					else
 						next_state = s0;
 				end
 			s1: begin
-				//but_out = but_out;
 				if(but_in)
 					next_state = s2;
 				else
 					next_state = s0;
 			end
 			s2: begin
-				//but_out = but_out;
 				if(but_in)
 					next_state = s3;
 				else
