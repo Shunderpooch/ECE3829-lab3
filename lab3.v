@@ -21,8 +21,7 @@
 module lab3(
     input [7:0] sw,
     input clk,
-    input write,
-    input read,
+    input button,
 	 input reset,
     output [6:0] seg,
     output [3:0] anode,
@@ -50,9 +49,6 @@ module lab3(
 	//seven seg display
 	wire[15:0] seg_in;
 	wire[7:0] dataout;
-	assign seg_in = (read) ? {4'b0, sw[7:4], dataout} :
-		{4'b0, sw[7:4], 4'b0, sw[3:0]};
-	seven_seg s (
     .in(seg_in), 
     .clk(clk_10m), 
     .seg(seg), 
@@ -60,26 +56,21 @@ module lab3(
     );
 	
 	//Button debouncers
-	wire write_db;
+	wire button_db;
 	but_debounce db1 (
-    .but_in(write), 
+    .but_in(button), 
     .clk(clk_10m), 
     .reset(reset), 
-    .but_out(write_db)
-    );
-	wire read_db;
-	but_debounce db2 (
-    .but_in(read), 
-    .clk(clk_10m), 
-    .reset(reset), 
-    .but_out(read_db)
+    .but_out(button_db)
     );
 	  
-	 wire validread;
+	 wire read_ready;
+	 wire [7:0] datain;
+	 wire read_sig, write_sig;
 	mem_control ram_control (
 		 .clk(clk_10m),
 		 .data(mem_data), 
-		 .read_ready(validread), 
+		 .read_ready(read_ready), 
 		 .memclk(memclk), 
 		 .adv_n(adv_n), 
 		 .cre(cre), 
@@ -88,13 +79,89 @@ module lab3(
 		 .we_n(we_n), 
 		 .lb_n(lb_n), 
 		 .ub_n(ub_n), 
-		 .read(read_db), 
-		 .write(write_db), 
-		 .datain({4'b0, sw [3:0]}), 
+		 .read(read_sig), 
+		 .write(write_sig), 
+		 .datain(datain), 
 		 .dataout(dataout), 
 		 .addr(addr), 
 		 .reset(reset),
 		 .addr_in(sw[7:4])
 		 );
+	
+	//counter to generate 10KHz clken_10KHz
+	wire clken_10KHz;
+	reg [6:0] clken_count;
+	always @(posedge clk_10m)
+	begin
+	if(clken_count == 7'd99)
+		clken_count <= 7'd0;
+	else
+		clken_count <= clken_count + 7'd1;
+	end
+	//generate clock enable at a rate of 10 KHz
+	assign clken_10KHz = (clken_count == 7'd99);
+	
+	parameter [1:0] init = 2'd0, write = 2'd1, read = 2'd2, dac = 2'd3;
+	
+	//counter for address bus
+	reg [3:0] count;
+	always @(posedge clk_10m)
+	begin
+	if((state == write & button_db) | (state == dac & clken_10KHz))
+		if(count == 4'd9)
+			count <= 4'd0;
+		else
+			count <= count + 4'd1;
+	end
+	
+	//state registers
+	reg [1:0] current_state, next_state;
+	
+	//next state logic
+	always @(count, button_db)
+	case(current_state)
+		init:
+			next_state = write;
+		write:
+			if(count == 4'd9)
+				next_state = read;
+			else
+				next_state = write;
+		read:
+			if(button_db)
+				next_state = dac;
+			else
+				next_state = read;
+		dac:
+			if(button_db)
+				next_state = init;
+			else
+				next_state = read;
+	endcase
+	
+	//synchronous state machine with asynchronous reset
+	always @(posedge clk_10m, posedge reset)
+	if(reset)
+		current_state <= init;
+	else
+		current_state <= next_state;
+	
+	//output logic
+	always @(current_state, count, clken_10KHz, button_db, sw, read_ready)
+	begin
+		case(current_state)
+			init:
+				addr = 4'd0;
+				datain = 8'd0;
+				seg_in = 16'd0;
+				read_sig = 1'b0;
+				write_sig = 1'b0;
+			write:
+				addr = count;
+				datain = sw;
+				seg_in = {8'd0, sw};
+				read_sig = 1'b0;
+				write_sig = button_db;
+			read:
 
 endmodule
