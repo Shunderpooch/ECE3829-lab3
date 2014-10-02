@@ -78,3 +78,7 @@ NET "addr[3]" LOC = J16;
 NET "addr[2]" LOC = J18;
 NET "addr[1]" LOC = K17;
 NET "addr[0]" LOC = K18;
+
+NET "dac_clock" LOC = P11;
+NET "dac_sync" LOC = T12;
+NET "dac_data" LOC = V12;

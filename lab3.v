@@ -35,8 +35,8 @@ module lab3(
 	 output lb_n,
 	 output ub_n,
 	 inout [15:0] mem_data,
-	 output dac_data,
 	 output dac_sout,
+	 output dac_clock,
 	 output dac_sync
     );
 
