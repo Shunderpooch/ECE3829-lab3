@@ -34,7 +34,10 @@ module lab3(
 	 output we_n,
 	 output lb_n,
 	 output ub_n,
-	 inout [15:0] mem_data
+	 inout [15:0] mem_data,
+	 output dac_data,
+	 output dac_sout,
+	 output dac_sync
     );
 
 		wire clk_10m;
@@ -67,6 +70,7 @@ module lab3(
 	 wire read_ready;
 	 wire [7:0] datain;
 	 wire read_sig, write_sig;
+	 wire [3:0] addrin;
 	mem_control ram_control (
 		 .clk(clk_10m),
 		 .data(mem_data), 
@@ -81,11 +85,11 @@ module lab3(
 		 .ub_n(ub_n), 
 		 .read(read_sig), 
 		 .write(write_sig), 
-		 .datain(datain), 
+		 .datain_b(datain), 
 		 .dataout(dataout), 
 		 .addr(addr), 
 		 .reset(reset),
-		 .addr_in(sw[7:4])
+		 .addr_in(addrin)
 		 );
 	
 	//counter to generate 10KHz clken_10KHz
@@ -113,6 +117,18 @@ module lab3(
 		else
 			count <= count + 4'd1;
 	end
+	
+	//instantiate dac driver
+	
+	wire [7:0] dac_data;
+	wire dac_begin;
+	dac_driver dac_drv(
+		.clk(clk_10m),
+		.dac_data(dac_data),
+		.dac_control(8'b0),
+		.dac_begin(dac_begin),
+		.dac_sout(dac_sout),
+		.dac_sync(dac_sync));
 	
 	//state registers
 	reg [1:0] current_state, next_state;
@@ -151,17 +167,38 @@ module lab3(
 	begin
 		case(current_state)
 			init:
-				addr = 4'd0;
+				addrin = 4'd0;
 				datain = 8'd0;
 				seg_in = 16'd0;
 				read_sig = 1'b0;
 				write_sig = 1'b0;
 			write:
-				addr = count;
+				addrin = count;
 				datain = sw;
 				seg_in = {8'd0, sw};
 				read_sig = 1'b0;
 				write_sig = button_db;
 			read:
-
+				addrin = {sw[3:0]}
+				datain = 8'd0;
+				seg_in = {8'd0, dataout};
+				if(read_ready)
+					read_sig = 1;
+				else
+					read_sig = 0;
+				write_sig = 1'b0;
+			dac:
+				addrin = count;
+				datain = 8'd0;
+				seg_in = 16'd0;
+				read_sig = clken_10KHz;
+				write_sig = 1'b0;
+		endcase
+	end
+	
+	assign dac_begin = (current_state == dac & read_ready) ? 1'b1 : 0;
+	
+	assign dac_data = dataout;
+	
+	
 endmodule

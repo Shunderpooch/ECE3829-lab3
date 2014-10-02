@@ -20,31 +20,33 @@
 //////////////////////////////////////////////////////////////////////////////////
 module mem_control(
 	//memory interface i/o
-    inout [15:0] data,
-    output memclk,
-    output adv_n,
-    output cre,
-    output ce_n,
-    output oe_n,
-    output we_n,
-    output lb_n,
-    output ub_n,
-	 output [25:0] addr,
-	 
-	 //module i/o
-	 input clk,
-	 input reset,
-	 input read,
-	 output read_ready,
-    input write,
-    input [7:0] datain,
-    output reg [7:0] dataout,
-    input [3:0] addr_in
+	inout [15:0] data,
+	output memclk,
+	output adv_n,
+	output cre,
+	output ce_n,
+	output oe_n,
+	output we_n,
+	output lb_n,
+	output ub_n,
+	output reg [25:0] addr,
+	//module i/o
+	input clk,
+	input reset,
+	input read,
+	output read_ready,
+	input write,
+	input [7:0] datain_b,
+	output reg [7:0] dataout,
+	input [3:0] addr_in
     );
 	 
 	 parameter [1:0] idle = 0, writing = 1, reading = 2, read_done = 3;
 
 	 reg [1:0] current_state, next_state;
+	 
+	 //flip flops to save data in
+	 reg [7:0] datain;
 	 
 	 //Flip Flop Control
 	 always @ (posedge clk, posedge reset)
@@ -90,6 +92,14 @@ module mem_control(
 			else
 				dataout <= dataout;
 				
+		//save data and adress with a flip flop
+		always @(posedge clk)
+		begin
+		if(read | write)
+			addr <= {22'b0, addr_in};
+			if(write)
+				datain <= datain_b;
+		end				
 		
 		assign memclk = 0;
 		assign ce_n = 0;
