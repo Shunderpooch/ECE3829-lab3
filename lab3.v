@@ -179,7 +179,7 @@ module lab3(
 				read_sig = 1'b0;
 				write_sig = button_db;
 			read:
-				addrin = {sw[3:0]}
+				addrin = sw[3:0]
 				datain = 8'd0;
 				seg_in = {8'd0, dataout};
 				if(read_ready)
